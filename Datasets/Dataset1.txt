@@ -1,0 +1,34 @@
+from flask import Flask, render_template
+import pandas as pd
+import folium
+
+
+def find_top_confirmed(n=15):
+    corona_dataframe = pd.read_csv('static/dataset1.csv')
+    by_country = corona_dataframe.groupby('Country_Region').sum()[['Confirmed', 'Deaths', 'Recovered', 'Active']]
+    country_dataframe = by_country.nlargest(n, 'Confirmed')[['Confirmed']]
+
+    return country_dataframe
+
+corona_dataframe = pd.read_csv('static/dataset1.csv')
+corona_dataframe = corona_dataframe.dropna()
+
+m = folium.Map(location=[34.223334,-82.461707], tiles='Stamen toner', zoom_start=8)
+
+def circle_maker(x):
+    folium.Circle(location=[x[0],x[1]], 
+    radius=float(x[2])*10, color="red", 
+    popup='{}\n confirmed cases:{}'.format(x[3],x[2])).add_to(m)
+
+corona_dataframe[['Lat','Long_','Confirmed','Combined_Key']].apply(lambda x:circle_maker(x),axis=1)
+html_map = m._repr_html_()
+
+app = Flask(__name__,template_folder='templates')
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return render_template("home.html",table=corona_dataframe, cmap=html_map)
+    
+if __name__=="__main__":
+    app.run(debug=True)
